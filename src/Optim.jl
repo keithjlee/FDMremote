@@ -1,6 +1,6 @@
 function FDMsolve!(;host = "127.0.0.1", port = 2000)
     #start server
-    println("SERVER OPENED--FIRST RUN MIGHT TAKE A WHILE :)")
+    println("SERVER OPENED--FIRST RUN MIGHT TAKE A WHILE :) ")
 
     ## PERSISTENT LOOP
     server = WebSockets.listen(host, port) do ws
