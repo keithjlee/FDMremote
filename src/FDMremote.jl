@@ -6,7 +6,8 @@ using SparseArrays
 using Optimization
 using OptimizationNLopt
 using Zygote
-using HTTP.WebSockets
+using HTTP
+using JSON
 
 include("FDM.jl")
 include("Optim.jl")
