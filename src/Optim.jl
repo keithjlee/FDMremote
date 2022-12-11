@@ -22,8 +22,8 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
 
                 # point geometry
                 x = Float64.(problem["X"])
-                y = Float64.(problem["Y"])
                 z = Float64.(problem["Z"])
+                y = Float64.(problem["Y"])
 
                 # initial force densities
                 q = Float64.(problem["Q"])
@@ -138,7 +138,7 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
 
                 # PARSING SOLUTION
                 xyz_final = solve_explicit(sol.u, Cn, Cf, Pn, xyzf)
-                xyz_full_final = fullXYZ(xyznew, xyzf, N, F)
+                xyz_full_final = fullXYZ(xyz_final, xyzf, N, F)
 
                 msgout = Dict("Finished" => true,
                     "Iter" => i,
