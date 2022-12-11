@@ -18,7 +18,7 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
             end
 
             # MAIN ALGORITHM
-            if problem["valid"] == true #check all required info is provided
+            if problem["Valid"] == true #check all required info is provided
 
                 # point geometry
                 x = Float64.(problem["X"])
@@ -105,13 +105,15 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
                         push!(losses, loss)
 
                         #send intermediate message
-                        msgout = json(Dict("finished" => false,
-                            "iter" => i, 
-                            "loss" => loss,
-                            "q" => q, 
+                        msgout = json(Dict("Finished" => false,
+                            "Iter" => i, 
+                            "Loss" => loss,
+                            "Q" => q, 
                             "X" => xyz[:,1], 
                             "Y" => xyz[:,2], 
-                            "Z" => xyz[:,3]))
+                            "Z" => xyz[:,3],
+                            "Qtrace" => iters,
+                            "Losstrace" => losses))
                             
                         HTTP.WebSockets.send(ws, json(msgout))
                         i += 1
@@ -138,14 +140,15 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
                 xyz_final = solve_explicit(sol.u, Cn, Cf, Pn, xyzf)
                 xyz_full_final = fullXYZ(xyznew, xyzf, N, F)
 
-                msgout = Dict("finished" => true,
-                    "q" => sol.u,
-                    "f" => sol.minimum,
-                    "qtrace" => iters,
-                    "losstrace" => losses,
+                msgout = Dict("Finished" => true,
+                    "Iter" => i,
+                    "Loss" => sol.minimum,
+                    "Q" => sol.u,
                     "X" => xyz_full_final[:, 1],
                     "Y" => xyz_full_final[:, 2],
-                    "Z" => xyz_full_final[:, 3])
+                    "Z" => xyz_full_final[:, 3],
+                    "Qtrace" => iters,
+                    "Losstrace" => losses)
 
                 HTTP.WebSockets.send(ws, json(msgout))
             end
