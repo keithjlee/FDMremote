@@ -18,8 +18,9 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
             end
 
             # MAIN ALGORITHM
-            if problem["Valid"] == true #check all required info is provided
+            if problem["Valid"] #check all required info is provided
 
+                println("READING DATA")
                 # point geometry
                 x = Float64.(problem["X"])
                 z = Float64.(problem["Z"])
@@ -55,6 +56,8 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
                 xyz_target = xyz[N, :]
                 Pn = hcat(px, py, pz)
 
+
+                println("OPTIMIZING")
                 # objective functions
                 objids = Int64.(problem["OBJids"])
                 objweights = Float64.(problem["OBJweights"])
@@ -92,11 +95,9 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
                 show = problem["ShowIterations"]
 
                 #trace
-                if show
-                    i = 0
-                    iters = Vector{Vector{Float64}}()
-                    losses = Vector{Float64}()
-                end
+                i = 0
+                iters = Vector{Vector{Float64}}()
+                losses = Vector{Float64}()
 
                 #callback function
                 function cb(q::Vector{Float64}, loss::Float64, xyz::Matrix{Float64})
@@ -112,7 +113,6 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
                             "X" => xyz[:,1], 
                             "Y" => xyz[:,2], 
                             "Z" => xyz[:,3],
-                            "Qtrace" => iters,
                             "Losstrace" => losses))
                             
                         send(ws, msgout)
@@ -136,6 +136,7 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
                     maxiters = maxiter,
                     callback = cb)
 
+                println("SOLUTION FOUND")
                 # PARSING SOLUTION
                 xyz_final = solve_explicit(sol.u, Cn, Cf, Pn, xyzf)
                 xyz_full_final = fullXYZ(xyz_final, xyzf, N, F)
@@ -147,7 +148,6 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
                     "X" => xyz_full_final[:, 1],
                     "Y" => xyz_full_final[:, 2],
                     "Z" => xyz_full_final[:, 3],
-                    "Qtrace" => iters,
                     "Losstrace" => losses)
 
                 send(ws, json(msgout))
@@ -163,7 +163,7 @@ Direct json solve
 """
 function FDMsolve(file::String)
     #start server
-    problem = JSON.parse(file)
+    problem = JSON.parsefile(file)
 # MAIN ALGORITHM
     if problem["Valid"] == true #check all required info is provided
 
@@ -297,6 +297,6 @@ function FDMsolve(file::String)
             "Qtrace" => iters,
             "Losstrace" => losses)
 
-        send(ws, json(msgout))
+        return msgout
     end
 end
