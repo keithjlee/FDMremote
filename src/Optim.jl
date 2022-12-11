@@ -115,7 +115,7 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
                             "Qtrace" => iters,
                             "Losstrace" => losses))
                             
-                        HTTP.WebSockets.send(ws, json(msgout))
+                        HTTP.WebSockets.send(ws, msgout)
                         i += 1
                         return false
                     else
