@@ -1,25 +1,54 @@
-function FDMsolve!(;host = "127.0.0.1", port = 2000)
+function FDMecho!(;host = "127.0.0.1", port = 2000)
     #start server
     println("SERVER OPENED--FIRST RUN MIGHT TAKE A WHILE :) ")
 
     ## PERSISTENT LOOP
-    server = HTTP.WebSockets.listen!(host, port) do ws
+    server = WebSockets.listen!(host, port) do ws
         # FOR EACH MESSAGE SENT FROM CLIENT
         for msg in ws
             println("MSG RECEIVED")
-            problem = JSON.parsefile(msg)
 
             # CLOSE INSTRUCTION
-            if problem == "close"
+            if msg == "CLOSE"
                 send(ws, "CONNECTION ENDED")
                 close(server)
                 println("SERVER ENDED BY CLIENT")
                 return
             end
 
-            # MAIN ALGORITHM
-            if problem["Valid"] #check all required info is provided
+            send(ws, msg)
+        end
+    end
+end
 
+function FDMsolve!(;host = "127.0.0.1", port = 2000)
+    #start server
+    println("SERVER OPENED--FIRST RUN MIGHT TAKE A WHILE :) ")
+
+    ## initialize variable
+    msgout = Dict
+    ## PERSISTENT LOOP
+    server = WebSockets.listen!(host, port) do ws
+        # FOR EACH MESSAGE SENT FROM CLIENT
+        for msg in ws
+            println("MSG RECEIVED")
+
+            # CLOSE INSTRUCTION
+            if msg == "CLOSE"
+                WebSockets.send(ws, "CONNECTION ENDED")
+                close(server)
+                println("SERVER ENDED BY CLIENT")
+                return
+            end
+
+            if msg == "init"
+                continue
+            end
+
+            problem = JSON.parse(msg)
+            # MAIN ALGORITHM
+            if haskey(problem, "Valid") && problem["Valid"]
+                problem = JSON.parse(msg)
                 println("READING DATA")
                 # point geometry
                 x = Float64.(problem["X"])
@@ -106,20 +135,31 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
                         push!(losses, loss)
 
                         #send intermediate message
-                        msgout = json(Dict("Finished" => false,
+                        msgout = Dict("Finished" => false,
                             "Iter" => i, 
                             "Loss" => loss,
                             "Q" => q, 
                             "X" => xyz[:,1], 
                             "Y" => xyz[:,2], 
                             "Z" => xyz[:,3],
-                            "Losstrace" => losses))
+                            "Losstrace" => losses)
+
+                        # msgout = [false,
+                        #     i,
+                        #     loss,
+                        #     q,
+                        #     xyz[:,1],
+                        #     xyz[:,2],
+                        #     xyz[:,3],
+                        #     losses]
                             
-                        send(ws, msgout)
+                        WebSockets.send(ws, json(msgout))
                         i += 1
+                        println("Iteration $i")
                         return false
                     else
                         i += 1
+                        println("Iteration $i")
                         return false
                     end
                 end
@@ -137,9 +177,12 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
                     callback = cb)
 
                 println("SOLUTION FOUND")
+                println(sol.u)
                 # PARSING SOLUTION
                 xyz_final = solve_explicit(sol.u, Cn, Cf, Pn, xyzf)
                 xyz_full_final = fullXYZ(xyz_final, xyzf, N, F)
+
+                # cb(sol.u, sol.minimum, xyz_full_final)
 
                 msgout = Dict("Finished" => true,
                     "Iter" => i,
@@ -150,9 +193,23 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
                     "Z" => xyz_full_final[:, 3],
                     "Losstrace" => losses)
 
-                send(ws, json(msgout))
+                WebSockets.send(ws, json(msgout))
+
+                # msgout = [true,
+                #     i,
+                #     sol.minimum,
+                #     sol.u,
+                #     xyz[:,1],
+                #     xyz[:,2],
+                #     xyz[:,3],
+                #     losses]
+                # WebSockets.send(ws, json(msgout))
+            else
+                println("INVALID INPUT")
             end
 
+            WebSockets.send(ws, json(msgout))
+            println("ITER")
         end
     end
 end

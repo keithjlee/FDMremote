@@ -13,6 +13,6 @@ include("FDM.jl")
 include("Optim.jl")
 
 export FDMsolve!
-export FDMsolve
+export FDMecho!
 
 end # module FDMremote
