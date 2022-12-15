@@ -11,8 +11,9 @@ using JSON
 
 include("FDM.jl")
 include("Optim.jl")
+include("Solve.jl")
 
-export FDMsolve!
+export FDMremote!
 export FDMecho!
 
 end # module FDMremote
