@@ -174,6 +174,7 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
                         end
                     end
 
+<<<<<<< Updated upstream
                     # OPTIMIZATION
                     opf = Optimization.OptimizationFunction(obj, Optimization.AutoZygote())
                     opp = Optimization.OptimizationProblem(opf, q,
@@ -215,6 +216,39 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
                     #     losses]
                     # WebSockets.send(ws, json(msgout))
                 end
+=======
+                # OPTIMIZATION
+                opf = Optimization.OptimizationFunction(obj, Optimization.AutoZygote())
+                opp = Optimization.OptimizationProblem(opf, q,
+                    p = SciMLBase.NullParameters(),
+                    lb = lb,
+                    ub = ub)
+
+                sol = Optimization.solve(opp, NLopt.LD_LBFGS(),
+                    abstol = abstol,
+                    maxiters = maxiter,
+                    callback = cb)
+
+                println("SOLUTION FOUND")
+                println(sol.u)
+                # PARSING SOLUTION
+                xyz_final = solve_explicit(sol.u, Cn, Cf, Pn, xyzf)
+                xyz_full_final = fullXYZ(xyz_final, xyzf, N, F)
+
+                # cb(sol.u, sol.minimum, xyz_full_final)
+
+                msgout = Dict("Finished" => true,
+                    "Iter" => i,
+                    "Loss" => sol.minimum,
+                    "Q" => sol.u,
+                    "X" => xyz_full_final[:, 1],
+                    "Y" => xyz_full_final[:, 2],
+                    "Z" => xyz_full_final[:, 3],
+                    "Losstrace" => losses)
+
+                WebSockets.send(ws, json(msgout))
+
+>>>>>>> Stashed changes
             else
                 println("INVALID INPUT")
             end
