@@ -86,14 +86,15 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
                 Pn = hcat(px, py, pz)
 
 
-                println("OPTIMIZING")
+                
                 # objective functions
                 objids = Int64.(problem["OBJids"])
                 objweights = Float64.(problem["OBJweights"])
 
                 # if null objective
                 if any(objids .== -1)
-                    solve_explicit(q, Cn, Cf, Pn, xyzf)
+                    println("SINGLE SOLVE")
+                    xyznew = solve_explicit(q, Cn, Cf, Pn, xyzf)
                     xyzfull = fullXYZ(xyznew, xyzf, N, F)
                     msgout = Dict("Finished" => false,
                         "Iter" => 0, 
@@ -106,6 +107,7 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
 
                     WebSockets.send(ws, json(msgout))
                 else
+                    println("OPTIMIZING")
                     # objective function
                     function obj(q::Vector{Float64}, p)
                         xyznew = solve_explicit(q, Cn, Cf, Pn, xyzf)
@@ -218,7 +220,7 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
             end
 
             WebSockets.send(ws, json(msgout))
-            println("ITER")
+            println("DONE")
         end
     end
 end
