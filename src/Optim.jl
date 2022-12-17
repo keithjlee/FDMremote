@@ -190,6 +190,7 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
                     println(sol.u)
                     # PARSING SOLUTION
                     xyz_final = solve_explicit(sol.u, Cn, Cf, Pn, xyzf)
+                    xyz_full_final = fullXYZ(xyz_final, xyzf, N, F)
 
                     # cb(sol.u, sol.minimum, xyz_full_final)
 
