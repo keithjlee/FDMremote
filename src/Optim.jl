@@ -27,6 +27,13 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
 
     ## initialize variable
     msgout = Dict
+
+    ## min/max values
+    minforce = 1.0
+    maxforce = 10000.
+    minlength = 1.0
+    maxlength = 1000.
+
     ## PERSISTENT LOOP
     server = WebSockets.listen!(host, port) do ws
         # FOR EACH MESSAGE SENT FROM CLIENT
@@ -85,11 +92,15 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
                 xyz_target = xyz[N, :]
                 Pn = hcat(px, py, pz)
 
-
-                
                 # objective functions
                 objids = Int64.(problem["OBJids"])
                 objweights = Float64.(problem["OBJweights"])
+
+                # values for min/max force/length
+                minforce = Float64(problem["MinForce"])
+                maxforce = Float64(problem["MaxForce"])
+                minlength = Float64(problem["MinLength"])
+                maxlength = Float64(problem["MaxLength"])
 
                 # if null objective
                 if any(objids .== -1)
@@ -127,7 +138,15 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
                             elseif id == 2 #FORCE VARIATION OBJ
                                 loss += w * -reduce(-, extrema(forces))
                             elseif id == 3 #∑FL
-                                loss += dot(lengths, forces)
+                                loss += w * dot(lengths, forces)
+                            elseif id == 4 #minimum length
+                                loss += w * minPenalty(lengths, minlength)
+                            elseif id == 5 #maximum length
+                                loss += w * maxPenalty(lengths, maxlength)
+                            elseif id == 6 # minimum force
+                                loss += w * minPenalty(forces, minforce)
+                            elseif id == 7 # maximum force
+                                loss += w * maxPenalty(forces, maxforce)
                             end
                         end
 
