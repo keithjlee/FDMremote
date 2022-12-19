@@ -13,7 +13,7 @@ include("FDM.jl")
 include("Optim.jl")
 include("Solve.jl")
 
-export FDMremote!
+export FDMsolve!
 export FDMecho!
 
 end # module FDMremote
