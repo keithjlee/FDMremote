@@ -23,7 +23,9 @@ end
 
 function FDMsolve!(;host = "127.0.0.1", port = 2000)
     #start server
+    println("###############################################")
     println("SERVER OPENED--FIRST RUN MIGHT TAKE A WHILE :) ")
+    println("###############################################")
 
     ## initialize variable
     msgout = Dict
@@ -49,6 +51,7 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
             end
 
             if msg == "init" || msg == "Hello World"
+                println("CONNECTION INITIALIZED")
                 continue
             end
 
