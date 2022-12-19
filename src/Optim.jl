@@ -21,7 +21,7 @@ function FDMecho!(;host = "127.0.0.1", port = 2000)
     end
 end
 
-function FDMremote!(;host = "127.0.0.1", port = 2000)
+function FDMsolve!(;host = "127.0.0.1", port = 2000)
     #start server
     println("###############################################")
     println("SERVER OPENED--FIRST RUN MIGHT TAKE A WHILE :) ")
