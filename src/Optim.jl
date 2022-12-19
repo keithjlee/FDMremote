@@ -29,6 +29,13 @@ function FDMremote!(;host = "127.0.0.1", port = 2000)
 
     ## initialize variable
     msgout = Dict
+
+    ## min/max values
+    minforce = 1.0
+    maxforce = 10000.
+    minlength = 1.0
+    maxlength = 1000.
+
     ## PERSISTENT LOOP
     server = WebSockets.listen!(host, port) do ws
         # FOR EACH MESSAGE SENT FROM CLIENT
@@ -88,25 +95,29 @@ function FDMremote!(;host = "127.0.0.1", port = 2000)
                 xyz_target = xyz[N, :]
                 Pn = hcat(px, py, pz)
 
-                # objective information
+                # objective functions
                 objids = Int64.(problem["OBJids"])
                 objweights = Float64.(problem["OBJweights"])
 
+                # values for min/max force/length
+                minforce = Float64(problem["MinForce"])
+                maxforce = Float64(problem["MaxForce"])
+                minlength = Float64(problem["MinLength"])
+                maxlength = Float64(problem["MaxLength"])
+
+                # if null objective
                 if any(objids .== -1)
-                    println("Single Evaluation")
-                    xyz_final = solve_explicit(q, Cn, Cf, Pn, xyzf)
-                    xyz_full_final = fullXYZ(xyz_final, xyzf, N, F)
-
-                    # cb(sol.u, sol.minimum, xyz_full_final)
-
-                    msgout = Dict("Finished" => true,
-                        "Iter" => 0,
+                    println("SINGLE SOLVE")
+                    xyznew = solve_explicit(q, Cn, Cf, Pn, xyzf)
+                    xyzfull = fullXYZ(xyznew, xyzf, N, F)
+                    msgout = Dict("Finished" => false,
+                        "Iter" => 0, 
                         "Loss" => 0,
-                        "Q" => q,
-                        "X" => xyz_full_final[:, 1],
-                        "Y" => xyz_full_final[:, 2],
-                        "Z" => xyz_full_final[:, 3],
-                        "Losstrace" => [0.0])
+                        "Q" => q, 
+                        "X" => xyzfull[:,1], 
+                        "Y" => xyzfull[:,2], 
+                        "Z" => xyzfull[:,3],
+                        "Losstrace" => [0])
 
                     WebSockets.send(ws, json(msgout))
                 else
@@ -130,7 +141,15 @@ function FDMremote!(;host = "127.0.0.1", port = 2000)
                             elseif id == 2 #FORCE VARIATION OBJ
                                 loss += w * -reduce(-, extrema(forces))
                             elseif id == 3 #∑FL
-                                loss += dot(lengths, forces)
+                                loss += w * dot(lengths, forces)
+                            elseif id == 4 #minimum length
+                                loss += w * minPenalty(lengths, minlength)
+                            elseif id == 5 #maximum length
+                                loss += w * maxPenalty(lengths, maxlength)
+                            elseif id == 6 # minimum force
+                                loss += w * minPenalty(forces, minforce)
+                            elseif id == 7 # maximum force
+                                loss += w * maxPenalty(forces, maxforce)
                             end
                         end
 
@@ -190,6 +209,7 @@ function FDMremote!(;host = "127.0.0.1", port = 2000)
                         callback = cb)
 
                     println("SOLUTION FOUND")
+                    println(sol.u)
                     # PARSING SOLUTION
                     xyz_final = solve_explicit(sol.u, Cn, Cf, Pn, xyzf)
                     xyz_full_final = fullXYZ(xyz_final, xyzf, N, F)
@@ -207,20 +227,12 @@ function FDMremote!(;host = "127.0.0.1", port = 2000)
 
                     WebSockets.send(ws, json(msgout))
                 end
-                # msgout = [true,
-                #     i,
-                #     sol.minimum,
-                #     sol.u,
-                #     xyz[:,1],
-                #     xyz[:,2],
-                #     xyz[:,3],
-                #     losses]
-                # WebSockets.send(ws, json(msgout))
             else
                 println("INVALID INPUT")
             end
 
             WebSockets.send(ws, json(msgout))
+            println("DONE")
         end
     end
 end
