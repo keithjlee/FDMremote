@@ -1,4 +1,7 @@
 ![](READMEassets/FDMremote.png)
+
+![optim_lowertol](https://user-images.githubusercontent.com/24748973/209169198-07f65fcf-8e96-4da2-9461-f12303df3626.gif)
+
 # FDMremote.jl
 This is the back-end server implementation to interface with [FDMremote_GH](https://github.com/keithjlee/FDMremote_GH). Core functionality is provided by [FDM](https://github.com/keithjlee/FDM).
 
