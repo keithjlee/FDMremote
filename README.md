@@ -1,7 +1,10 @@
+<div style="text-align: center;">
 ![](READMEassets/FDMremote.png)
+</div>
 
+<div style="text-align: center;">
 ![optim_lowertol](https://user-images.githubusercontent.com/24748973/209169198-07f65fcf-8e96-4da2-9461-f12303df3626.gif)
-
+</div>
 # FDMremote.jl
 This is the back-end server implementation to interface with [FDMremote_GH](https://github.com/keithjlee/FDMremote_GH). Core functionality is provided by [FDM](https://github.com/keithjlee/FDM).
 
