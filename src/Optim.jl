@@ -105,128 +105,114 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
                 minlength = Float64(problem["MinLength"])
                 maxlength = Float64(problem["MaxLength"])
 
-                # if null objective
-                if any(objids .== -1)
-                    println("SINGLE SOLVE")
+                # solving
+                println("OPTIMIZING")
+                # objective function
+                function obj(q::Vector{Float64}, p)
                     xyznew = solve_explicit(q, Cn, Cf, Pn, xyzf)
                     xyzfull = fullXYZ(xyznew, xyzf, N, F)
-                    msgout = Dict("Finished" => false,
-                        "Iter" => 0, 
-                        "Loss" => 0,
-                        "Q" => q, 
-                        "X" => xyzfull[:,1], 
-                        "Y" => xyzfull[:,2], 
-                        "Z" => xyzfull[:,3],
-                        "Losstrace" => [0])
+                    lengths = norm.(eachrow(C * xyzfull))
+                    forces = q .* lengths
 
-                    WebSockets.send(ws, json(msgout))
-                else
-                    println("OPTIMIZING")
-                    # objective function
-                    function obj(q::Vector{Float64}, p)
-                        xyznew = solve_explicit(q, Cn, Cf, Pn, xyzf)
-                        xyzfull = fullXYZ(xyznew, xyzf, N, F)
-                        lengths = norm.(eachrow(C * xyzfull))
-                        forces = q .* lengths
-
-                        #####
-                        #Composite loss functions: this is ugly but differentiable :)
-                        #####
-                        loss = 0.0
-                        for (id, w) in zip(objids, objweights)
-                            if id == 0 #TARGET OBJ
-                                loss += w * norm(xyznew - xyz_target)
-                            elseif id == 1 #LENGTH VARIATION OBJ
-                                loss += w * -reduce(-, extrema(lengths))
-                            elseif id == 2 #FORCE VARIATION OBJ
-                                loss += w * -reduce(-, extrema(forces))
-                            elseif id == 3 #∑FL
-                                loss += w * dot(lengths, forces)
-                            elseif id == 4 #minimum length
-                                loss += w * minPenalty(lengths, minlength)
-                            elseif id == 5 #maximum length
-                                loss += w * maxPenalty(lengths, maxlength)
-                            elseif id == 6 # minimum force
-                                loss += w * minPenalty(forces, minforce)
-                            elseif id == 7 # maximum force
-                                loss += w * maxPenalty(forces, maxforce)
-                            end
-                        end
-
-                        return loss, xyzfull
-                    end
-
-                    #optimization parameters
-                    lb = repeat([problem["LowerBound"]], ne)
-                    ub = repeat([problem["UpperBound"]], ne)
-                    abstol = problem["AbsTolerance"]
-                    freq = problem["UpdateFrequency"]
-                    maxiter = problem["MaxIterations"]
-                    show = problem["ShowIterations"]
-
-                    #trace
-                    i = 0
-                    iters = Vector{Vector{Float64}}()
-                    losses = Vector{Float64}()
-
-                    #callback function
-                    function cb(q::Vector{Float64}, loss::Float64, xyz::Matrix{Float64})
-                        if show && i % freq == 0
-                            push!(iters, deepcopy(q))
-                            push!(losses, loss)
-
-                            #send intermediate message
-                            msgout = Dict("Finished" => false,
-                                "Iter" => i, 
-                                "Loss" => loss,
-                                "Q" => q, 
-                                "X" => xyz[:,1], 
-                                "Y" => xyz[:,2], 
-                                "Z" => xyz[:,3],
-                                "Losstrace" => losses)
-                                
-                            WebSockets.send(ws, json(msgout))
-                            i += 1
-                            println("Iteration $i")
-                            return false
-                        else
-                            i += 1
-                            println("Iteration $i")
-                            return false
+                    #####
+                    #Composite loss functions: this is ugly but differentiable :)
+                    #####
+                    loss = 0.0
+                    for (id, w) in zip(objids, objweights)
+                        if id == -1
+                            loss += 0.0
+                        elseif id == 0 #TARGET OBJ
+                            loss += w * norm(xyznew - xyz_target)
+                        elseif id == 1 #LENGTH VARIATION OBJ
+                            loss += w * -reduce(-, extrema(lengths))
+                        elseif id == 2 #FORCE VARIATION OBJ
+                            loss += w * -reduce(-, extrema(forces))
+                        elseif id == 3 #∑FL
+                            loss += w * dot(lengths, forces)
+                        elseif id == 4 #minimum length
+                            loss += w * minPenalty(lengths, minlength)
+                        elseif id == 5 #maximum length
+                            loss += w * maxPenalty(lengths, maxlength)
+                        elseif id == 6 # minimum force
+                            loss += w * minPenalty(forces, minforce)
+                        elseif id == 7 # maximum force
+                            loss += w * maxPenalty(forces, maxforce)
                         end
                     end
 
-                    # OPTIMIZATION
-                    opf = Optimization.OptimizationFunction(obj, Optimization.AutoZygote())
-                    opp = Optimization.OptimizationProblem(opf, q,
-                        p = SciMLBase.NullParameters(),
-                        lb = lb,
-                        ub = ub)
-
-                    sol = Optimization.solve(opp, NLopt.LD_LBFGS(),
-                        abstol = abstol,
-                        maxiters = maxiter,
-                        callback = cb)
-
-                    println("SOLUTION FOUND")
-                    println(sol.u)
-                    # PARSING SOLUTION
-                    xyz_final = solve_explicit(sol.u, Cn, Cf, Pn, xyzf)
-                    xyz_full_final = fullXYZ(xyz_final, xyzf, N, F)
-
-                    # cb(sol.u, sol.minimum, xyz_full_final)
-
-                    msgout = Dict("Finished" => true,
-                        "Iter" => i,
-                        "Loss" => sol.minimum,
-                        "Q" => sol.u,
-                        "X" => xyz_full_final[:, 1],
-                        "Y" => xyz_full_final[:, 2],
-                        "Z" => xyz_full_final[:, 3],
-                        "Losstrace" => losses)
-
-                    WebSockets.send(ws, json(msgout))
+                    return loss, xyzfull
                 end
+
+                #optimization parameters
+                lb = repeat([problem["LowerBound"]], ne)
+                ub = repeat([problem["UpperBound"]], ne)
+                abstol = problem["AbsTolerance"]
+                freq = problem["UpdateFrequency"]
+                maxiter = problem["MaxIterations"]
+                show = problem["ShowIterations"]
+
+                #trace
+                i = 0
+                iters = Vector{Vector{Float64}}()
+                losses = Vector{Float64}()
+
+                #callback function
+                function cb(q::Vector{Float64}, loss::Float64, xyz::Matrix{Float64})
+                    if show && i % freq == 0
+                        push!(iters, deepcopy(q))
+                        push!(losses, loss)
+
+                        #send intermediate message
+                        msgout = Dict("Finished" => false,
+                            "Iter" => i, 
+                            "Loss" => loss,
+                            "Q" => q, 
+                            "X" => xyz[:,1], 
+                            "Y" => xyz[:,2], 
+                            "Z" => xyz[:,3],
+                            "Losstrace" => losses)
+                            
+                        WebSockets.send(ws, json(msgout))
+                        i += 1
+                        println("Iteration $i")
+                        return false
+                    else
+                        i += 1
+                        println("Iteration $i")
+                        return false
+                    end
+                end
+
+                # OPTIMIZATION
+                opf = Optimization.OptimizationFunction(obj, Optimization.AutoZygote())
+                opp = Optimization.OptimizationProblem(opf, q,
+                    p = SciMLBase.NullParameters(),
+                    lb = lb,
+                    ub = ub)
+
+                sol = Optimization.solve(opp, NLopt.LD_LBFGS(),
+                    abstol = abstol,
+                    maxiters = maxiter,
+                    callback = cb)
+
+                println("SOLUTION FOUND")
+                println(sol.u)
+                # PARSING SOLUTION
+                xyz_final = solve_explicit(sol.u, Cn, Cf, Pn, xyzf)
+                xyz_full_final = fullXYZ(xyz_final, xyzf, N, F)
+
+                # cb(sol.u, sol.minimum, xyz_full_final)
+
+                msgout = Dict("Finished" => true,
+                    "Iter" => i,
+                    "Loss" => sol.minimum,
+                    "Q" => sol.u,
+                    "X" => xyz_full_final[:, 1],
+                    "Y" => xyz_full_final[:, 2],
+                    "Z" => xyz_full_final[:, 3],
+                    "Losstrace" => losses)
+
+                WebSockets.send(ws, json(msgout))
             else
                 println("INVALID INPUT")
             end
