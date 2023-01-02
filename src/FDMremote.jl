@@ -11,6 +11,7 @@ using JSON
 
 include("FDM.jl")
 include("Optim.jl")
+include("utils.jl")
 
 export FDMsolve!
 
