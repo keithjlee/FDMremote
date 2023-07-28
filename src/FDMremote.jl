@@ -10,8 +10,10 @@ using HTTP
 using JSON
 
 include("FDM.jl")
-include("Optim.jl")
-include("utils.jl")
+include("types.jl")
+include("optimization.jl")
+include("analysis.jl")
+include("communication.jl")
 
 export FDMsolve!
 

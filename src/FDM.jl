@@ -24,19 +24,3 @@ function fullXYZ(xyzcurrent::Matrix{Float64}, xyzf::Matrix{Float64}, N::Vector{I
 
     return xyzunsorted[i, :]
 end
-
-"""
-Penalizes values in vector that are below a threshold 
-"""
-function minPenalty(x::Vector{Float64}, l::Float64)
-    thresh = l .- x
-    return sum(thresh .+ abs.(thresh))
-end
-
-"""
-Penalizes values in vector that are above a threshold
-"""
-function maxPenalty(x::Vector{Float64}, l::Float64)
-    thresh = x .- l
-    return sum(thresh .+ abs.(thresh))
-end
