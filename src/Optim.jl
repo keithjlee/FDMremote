@@ -36,27 +36,23 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
 
                 # MAIN ALGORITHM
                 # IF PROBLEM VALID
-                if haskey(problem, "Valid") && problem["Valid"]
 
-                    println("READING DATA")
+                println("READING DATA")
 
-                    # CONVERT MESSAGE
-                    receiver = Receiver(problem)
+                # CONVERT MESSAGE
+                receiver = Receiver(problem)
 
-                    # SOLVE
-                    println("OPTIMIZING")
-                    if counter == 0
-                        println("First run will take a while! :--)")
-                        counter += 1
-                    end
-                    
-                    # OPTIMIZATION
-                    FDMoptim!(receiver, ws)
-                else
-                    println("INVALID INPUT")
+                # SOLVE
+                if counter == 0
+                    println("First run will take a while! :--)")
+                    counter += 1
                 end
+                
+                # OPTIMIZATION
+                FDMoptim!(receiver, ws)
+                continue
             catch
-                println("INVALID INPUT")
+                # println("INVALID INPUT")
             end
 
             println("DONE")
