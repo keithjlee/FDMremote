@@ -31,28 +31,29 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
 
             # ANALYSIS
             try
-                # DESERIALIZE MESSAGE
-                problem = JSON.parse(msg)
+            # DESERIALIZE MESSAGE
+            problem = JSON.parse(msg)
 
-                # MAIN ALGORITHM
-                # IF PROBLEM VALID
+            # MAIN ALGORITHM
+            # IF PROBLEM VALID
 
-                println("READING DATA")
+            println("READING DATA")
 
-                # CONVERT MESSAGE
-                receiver = Receiver(problem)
+            # CONVERT MESSAGE
+            receiver = Receiver(problem)
 
-                # SOLVE
-                if counter == 0
-                    println("First run will take a while! :--)")
-                    counter += 1
-                end
-                
-                # OPTIMIZATION
-                FDMoptim!(receiver, ws)
+            # SOLVE
+            if counter == 0
+                println("First run will take a while! :--)")
+                counter += 1
+            end
+            
+            # OPTIMIZATION
+            FDMoptim!(receiver, ws)
                 continue
             catch
-                # println("INVALID INPUT")
+                println("INVALID INPUT")
+                println("CHECK PARAMETER BOUNDS")
             end
 
             println("DONE")
