@@ -50,7 +50,7 @@ function FDMsolve!(;host = "127.0.0.1", port = 2000)
             
             # OPTIMIZATION
             FDMoptim!(receiver, ws)
-                continue
+            #     continue
             catch
                 println("INVALID INPUT")
                 println("CHECK PARAMETER BOUNDS")
